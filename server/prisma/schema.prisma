@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int            @id @default(autoincrement())
+  createdAt        DateTime       @default(now())
+  email            String         @unique
+  username         String         @db.VarChar(20)
+  fullName         String?        @db.VarChar(50)
+  password         String         @db.VarChar(255)
+  picture          String         @default("default.jpg") @db.VarChar(255)
+  status           Int            @default(1)
+  GroupMember      GroupMember[]
+  GroupMessage     GroupMessage[]
+  conversations1   Conversation[] @relation("User1Conversations")
+  conversations2   Conversation[] @relation("User2Conversations")
+  sentMessages     Message[]      @relation("SenderMessages")
+  receivedMessages Message[]      @relation("ReceiverMessages")
+  friends1         Friend[]       @relation("User1Friends")
+  friends2         Friend[]       @relation("User2Friends")
+  Group            Group[]
+
+  @@index([username])
+  @@map(name: "users")
+}
+
+model Group {
+  id           Int            @id @default(autoincrement())
+  createdAt    DateTime       @default(now())
+  name         String         @db.VarChar(75)
+  user         User           @relation(fields: [userId], references: [id])
+  userId       Int
+  GroupMember  GroupMember[]
+  GroupMessage GroupMessage[]
+
+  @@index([userId])
+  @@map(name: "groups")
+}
+
+model GroupMember {
+  id       Int       @id @default(autoincrement())
+  group    Group     @relation(fields: [groupId], references: [id])
+  groupId  Int
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int
+  joinedAt DateTime?
+
+  @@index([groupId, userId])
+  @@map(name: "groupMembers")
+}
+
+model GroupMessage {
+  id        Int      @id @default(autoincrement())
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  message   String   @db.VarChar(1500)
+  createdAt DateTime @default(now())
+
+  @@index([groupId, userId])
+  @@map(name: "groupMessages")
+}
+
+model Conversation {
+  id      Int       @id @default(autoincrement())
+  user1   User      @relation("User1Conversations", fields: [user1Id], references: [id])
+  user1Id Int
+  user2   User      @relation("User2Conversations", fields: [user2Id], references: [id])
+  user2Id Int
+  Message Message[]
+
+  @@index([user1Id, user2Id])
+  @@map(name: "conversations")
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId Int
+  sender         User         @relation("SenderMessages", fields: [senderId], references: [id])
+  senderId       Int
+  receiver       User         @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  receiverId     Int
+  messageText    String
+  sentAt         DateTime     @default(now())
+
+  @@index([senderId, receiverId, conversationId])
+  @@map(name: "messages")
+}
+
+model Friend {
+  id      Int  @id @default(autoincrement())
+  user1   User @relation("User1Friends", fields: [user1Id], references: [id])
+  user1Id Int
+  user2   User @relation("User2Friends", fields: [user2Id], references: [id])
+  user2Id Int
+  status  Int  @default(0)
+
+  @@index([user1Id, user2Id])
+  @@map(name: "friends")
+}
